@@ -6,6 +6,10 @@ let network = require('network');
 let mongoose = require('mongoose');
 
 let siteLocationsModel = require('../models/siteLocationMongoModel');
+let weatherDataModel = mongoose.Schema({
+    date: String,
+    weatherData: Object
+});
 
 function weatherDataOps()
 {
@@ -19,30 +23,74 @@ function weatherDataOps()
         }
         else
         {
-           //todo make the weather API call for all sites using their long, lat
             sites.forEach(function (site)
             {
-               //console.log(site.location.lat+'.....'+site.location.long);
-                getWeatherData(site.location.lat, site.location.long, d.getUTCHours());
-                // let WD = Promise.all([
-                //
-                // ]).then((data) => {
-                //
-                //     let WeatherData = new Selector({
-                //         date: myDate,
-                //         weatherData: data
-                //     });
-                //     WeatherData.save(function (err, res) {
-                //         if (err)
-                //         {
-                //             return console.error(err);
-                //         }
-                //         if (res)
-                //         {
-                //             console.log(res);
-                //         }
-                //     });
-                // });
+                //console.log(site.location.lat+'.....'+site.location.long);
+                let Selector = mongoose.model('id_' + site._id + 'weatherdata', weatherDataModel);
+                try
+                {
+                    Selector.findOne().where('date').equals(myDate).exec(function (err, result)
+                    {
+                        if (err)
+                        {
+                            return console.error(err);
+                        }
+                        else if (result === null)
+                        {
+                            //first we are calling the function to get weather data
+                            // and waiting for the promise for the other funciton to proceed
+                            //to data insertion link: https://blog.risingstack.com/node-hero-async-programming-in-node-js/
+                            let WD = Promise.all([
+                                getWeatherData(site.location.lat,site.location.long, d.getUTCHours())
+                            ]).then((data) => {
+
+                                    let WeatherData = new Selector({
+                                        date: myDate,
+                                        weatherData: data
+                                    });
+                                    WeatherData.save(function (err, res) {
+                                        if (err)
+                                        {
+                                            return console.error(err);
+                                        }
+                                        if (res)
+                                        {
+                                            console.log(res);
+                                        }
+                                    });
+                                    //sendData(WeatherData.weatherData,client)
+                                }
+                            );
+
+
+
+                        }
+                        else
+                        {
+                            console.log('DATA EXIST No2---->SEND DATA TO USER');
+                            //console.log(result.weatherData);
+                            //sendData(WeatherData.weatherData,client)
+                        }
+                    });
+                }
+                catch (e)
+                {
+                    let WeatherData = new Selector({
+                        date: myDate,
+                        weatherData: getWeatherData(site.location.lat,site.location.long, d.getUTCHours())
+                    });
+                    WeatherData.save(function (err, res) {
+                        if (err)
+                        {
+                            return console.error(err);
+                        }
+                        if (res)
+                        {
+                            console.log(res);
+                        }
+                    });
+                    //sendData(WeatherData.weatherData,client)
+                }
             });
         }
     });
