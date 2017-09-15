@@ -13,8 +13,9 @@ let weatherDataModel = mongoose.Schema({
 
 function weatherDataOps()
 {
+    //todo this date must come from client
     var d = new Date();
-    let myDate = d.getDate() + ' ' + d.getMonth() + ' ' + d.getFullYear();
+    let myDate = d.getDate() + ' ' + (d.getMonth()+1) + ' ' + d.getFullYear();
 
     siteLocationsModel.find({},{location:1}, function (err, sites) {
         if (err)
@@ -59,6 +60,10 @@ function weatherDataOps()
                                         }
                                     });
                                     //sendData(WeatherData.weatherData,client)
+                                    let dt = Promise.all([
+                                        temperatureAndCloud(Selector, site.location.lat, site.location.long, d, myDate)
+                                    ]).then((data) => {});
+
                                 }
                             );
 
@@ -67,9 +72,12 @@ function weatherDataOps()
                         }
                         else
                         {
-                            console.log('DATA EXIST No2---->SEND DATA TO USER');
+                            console.log('DATA EXIST No2---->SEND DATA TO USER for: '+site.location);
                             //console.log(result.weatherData);
                             //sendData(WeatherData.weatherData,client)
+                            let dt = Promise.all([
+                                temperatureAndCloud(Selector, site.location.lat, site.location.long, d, myDate)
+                            ]).then((data) => {});
                         }
                     });
                 }
@@ -90,6 +98,9 @@ function weatherDataOps()
                         }
                     });
                     //sendData(WeatherData.weatherData,client)
+                    let dt = Promise.all([
+                        temperatureAndCloud(Selector, site.location.lat, site.location.long, d, myDate)
+                    ]).then((data) => {});
                 }
             });
         }
@@ -126,6 +137,51 @@ function getWeatherData(lat,long, time)
 
     });
 
+}
+
+function temperatureAndCloud(Selector,lat,long,date,myDate)
+{
+    let hour=date.getHours();
+    //2017-09-15 21:00:00
+    let dateFormat = date.getFullYear()+'-0'+(date.getMonth()+1)+'-'+date.getDate()
+    //let dateFormat = date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate()+' '+hour+':'+'00'+':'+'00';
+    try
+    {
+        Selector.findOne().where('date').equals(myDate).exec(function (err, result) {
+            if (err)
+            {
+                return console.error(err);
+            }
+            else if (result)
+            {
+                result.weatherData[0].list.forEach(function (item,index)
+                {
+                    if(item.dt_txt.substring(0,10)===dateFormat)
+                    {
+                        let dataHour=item.dt_txt.substring(11,13);
+                        let dataHour2=(result.weatherData[0].list[index+1]).dt_txt.substring(11,13);
+                        if(hour>=21)
+                        {
+                            console.log('Cloud cover:'+item.clouds.all+'%');
+                            console.log('Temperature:'+item.main.temp+' Celsius');
+                        }
+                        else if(hour>=dataHour && hour<=dataHour2)
+                        {
+                            console.log('Cloud cover:'+item.clouds.all+'%');
+                            console.log('Temperature:'+item.main.temp+' Celsius');
+                        }
+                    }
+
+                });
+                //substring(11,13);
+            }
+        });
+    }
+    catch(e)
+    {
+        return console.error(e);
+    }
+    return;
 }
 
 /* GET home page. */
