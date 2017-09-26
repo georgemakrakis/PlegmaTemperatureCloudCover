@@ -11,6 +11,14 @@ let weatherDataModel = mongoose.Schema({
     weatherData: Object
 });
 
+function resolveAfter61Seconds() {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve();
+            console.log('Timeout for >60 sites-API calls happened');
+        }, 61000);
+    });
+}
 function weatherDataOps()
 {
     //todo this date must come from client
@@ -24,8 +32,13 @@ function weatherDataOps()
         }
         else
         {
-            sites.forEach(function (site)
+            sites.forEach(async function (site,index)
             {
+                //this is the check for >60 sites-API calls that the API allows
+                if((index % 60)==0 && index!=0)
+                {
+                    const a= await resolveAfter61Seconds();
+                }
                 //console.log(site.location.lat+'.....'+site.location.long);
                 let Selector = mongoose.model('id_' + site._id + 'weatherdata', weatherDataModel);
                 try
@@ -183,6 +196,7 @@ function temperatureAndCloud(Selector,lat,long,date,myDate)
     }
     return;
 }
+
 
 /* GET home page. */
 router.get('/', function(req, res, next)
